@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estados Financieros - Editor Interactivo</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Times New Roman', Times, serif; font-size: 13px; line-height: 1.5; padding: 0; margin: 0; color: #000; }
+
+        /* ===== TOOLBAR ===== */
+        #toolbar {
+            position: sticky; top: 0; z-index: 2000;
+            background: #2c3e50; color: #fff;
+            padding: 8px 16px; display: flex; gap: 6px; align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .tool-btn {
+            background: transparent; color: #ecf0f1; border: 1px solid #4a6274;
+            padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;
+            display: flex; align-items: center; gap: 5px; transition: all .15s;
+        }
+        .tool-btn:hover { background: #34495e; border-color: #5a7a8f; }
+        .tool-btn.active { background: #3498db; border-color: #3498db; color: #fff; }
+        .tool-divider { width: 1px; height: 24px; background: #4a6274; margin: 0 4px; }
+        #ann-color { width: 30px; height: 28px; border: none; cursor: pointer; border-radius: 3px; }
+        .tool-label { font-size: 11px; color: #95a5a6; margin-right: 4px; }
+
+        /* ===== MAIN CONTENT ===== */
+        #statements-container { padding: 30px; max-width: 960px; margin: auto; position: relative; }
+
+        .box { border: 1px solid #000; padding: 15px 20px; margin-bottom: 40px; }
+        .box-header { text-align: center; margin-bottom: 10px; }
+        .box-header div { font-size: 14px; }
+
+        /* ===== ERI TABLE ===== */
+        .eri-table { width: 100%; border-collapse: collapse; }
+        .eri-table td { padding: 1px 4px; vertical-align: middle; white-space: nowrap; }
+        .eri-label { width: 40%; position: relative; }
+        .eri-c1 { width: 10%; text-align: center; font-family: monospace; font-size: 12px; }
+        .eri-c2 { width: 10%; text-align: center; font-family: monospace; font-size: 12px; }
+        .eri-c3 { width: 14%; text-align: center; font-family: monospace; font-size: 12px; }
+        .eri-c4 { width: 14%; text-align: center; font-family: monospace; font-size: 12px; }
+
+        .indent0 { padding-left: 4px !important; }
+        .indent1 { padding-left: 20px !important; }
+        .indent2 { padding-left: 36px !important; }
+
+        .uline { border-bottom: 1px solid #000; display: inline-block; min-width: 45px; text-align: center; padding: 0 3px; }
+        .dline { border-bottom: 3px double #000; display: inline-block; min-width: 45px; text-align: center; padding: 0 3px; font-weight: bold; }
+        .red-uline { border-bottom: 2px solid red; color: red; display: inline-block; min-width: 45px; text-align: center; padding: 0 3px; font-weight: bold; }
+
+        /* ===== BALANCE TABLE ===== */
+        .bal-grid { display: flex; gap: 0; }
+        .bal-left, .bal-right { width: 50%; }
+        .bal-left { padding-right: 8px; }
+        .bal-right { padding-left: 8px; }
+
+        .bal-table { width: 100%; border-collapse: collapse; }
+        .bal-table td { padding: 1px 3px; vertical-align: middle; white-space: nowrap; font-size: 12px; }
+
+        .section-head { font-weight: bold; text-decoration: underline; }
+        .subsection { font-weight: bold; }
+        .spacer td { height: 10px; }
+
+        /* ===== EDITABLE ===== */
+        [contenteditable] { outline: none; border-bottom: 1px dashed transparent; transition: border-color .2s; cursor: text; }
+        [contenteditable]:hover { border-bottom-color: #bdc3c7; }
+        [contenteditable]:focus { border-bottom-color: #3498db; background: #eaf6ff; }
+
+        /* ===== ROW CONTROLS ===== */
+        .row-controls {
+            position: absolute; left: -28px; top: 50%; transform: translateY(-50%);
+            display: none; flex-direction: column; gap: 1px; z-index: 10;
+        }
+        tr:hover .row-controls { display: flex; }
+        .row-btn {
+            width: 18px; height: 18px; border: 1px solid #bbb; border-radius: 3px;
+            background: #fff; cursor: pointer; font-size: 12px; line-height: 16px;
+            text-align: center; color: #555; padding: 0; font-family: sans-serif;
+        }
+        .row-btn:hover { background: #e8e8e8; }
+        .row-btn.remove:hover { background: #ffdddd; color: #c0392b; border-color: #c0392b; }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 5000;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal {
+            background: #fff; border-radius: 8px; padding: 24px; max-width: 440px; width: 90%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px;
+        }
+        .modal h3 { margin: 0 0 12px; font-size: 16px; }
+        .modal p { margin: 8px 0; color: #555; line-height: 1.5; }
+        .modal-actions { margin-top: 18px; display: flex; gap: 8px; justify-content: flex-end; }
+        .modal-btn {
+            padding: 8px 18px; border-radius: 5px; border: 1px solid #ccc;
+            cursor: pointer; font-size: 13px; font-family: inherit;
+        }
+        .modal-btn.primary { background: #3498db; color: #fff; border-color: #3498db; }
+        .modal-btn.danger { background: #e74c3c; color: #fff; border-color: #e74c3c; }
+
+        .warning-icon { font-size: 20px; margin-right: 6px; }
+        .severity-error { color: #e74c3c; }
+        .severity-info { color: #f39c12; }
+
+        /* ===== ANNOTATION OVERLAY ===== */
+        #annotation-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: 1000;
+        }
+        body[data-tool="arrow"] #annotation-overlay,
+        body[data-tool="circle"] #annotation-overlay,
+        body[data-tool="note"] #annotation-overlay { pointer-events: auto; cursor: crosshair; }
+        body[data-tool="note"] #annotation-overlay { cursor: text; }
+
+        /* Annotation notes */
+        .ann-note {
+            background: #fff9c4; border: 1px solid #f0e68c; border-radius: 4px;
+            padding: 6px 8px; font-family: -apple-system, sans-serif; font-size: 12px;
+            box-shadow: 1px 1px 4px rgba(0,0,0,0.15); max-width: 200px; position: relative;
+        }
+        .ann-note textarea {
+            border: none; background: transparent; font-family: inherit; font-size: 12px;
+            width: 100%; min-height: 30px; resize: vertical; outline: none;
+        }
+        .ann-delete {
+            position: absolute; top: -6px; right: -6px; width: 16px; height: 16px;
+            border-radius: 50%; background: #e74c3c; color: #fff; border: none;
+            font-size: 10px; cursor: pointer; line-height: 16px; text-align: center; padding: 0;
+        }
+
+        /* ===== FIELD NOTES ===== */
+        .note-icon {
+            display: inline-block; width: 18px; height: 18px; border-radius: 50%;
+            text-align: center; line-height: 18px; font-size: 11px; cursor: pointer;
+            margin-left: 4px; vertical-align: middle; opacity: 0; transition: opacity .15s;
+            border: 1px solid #d1d5db; background: #f9fafb; color: #9ca3af;
+        }
+        tr:hover .note-icon, td:hover > .note-icon { opacity: 1; }
+        .note-icon.has-note { opacity: 1; background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+        .note-icon:hover { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+        .field-note {
+            display: block; margin: 3px 0 2px 20px; padding: 4px 8px;
+            background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px;
+            font-family: -apple-system, sans-serif; font-size: 11px; color: #92400e;
+            white-space: normal; line-height: 1.4;
+        }
+        .field-note textarea {
+            width: 100%; min-height: 24px; border: none; background: transparent;
+            font-family: inherit; font-size: 11px; color: #92400e;
+            outline: none; resize: vertical; padding: 0;
+        }
+        .field-note-close {
+            float: right; background: none; border: none; cursor: pointer;
+            color: #d97706; font-size: 13px; padding: 0 2px; line-height: 1;
+        }
+
+        /* Sim notes */
+        .sim-note-icon {
+            display: inline-block; width: 16px; height: 16px; border-radius: 50%;
+            text-align: center; line-height: 16px; font-size: 10px; cursor: pointer;
+            margin-left: 4px; vertical-align: middle;
+            border: 1px solid #d1d5db; background: #f9fafb; color: #9ca3af;
+        }
+        .sim-note-icon.has-note { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+        .sim-note-icon:hover { background: #fef3c7; border-color: #f59e0b; }
+        .sim-note-area {
+            margin-top: 4px; padding: 4px 6px;
+            background: #fffbeb; border: 1px solid #fde68a; border-radius: 3px;
+        }
+        .sim-note-area textarea {
+            width: 100%; min-height: 20px; border: none; background: transparent;
+            font-family: -apple-system, sans-serif; font-size: 11px; color: #92400e;
+            outline: none; resize: vertical; padding: 0;
+        }
+
+        /* ===== EDITED (blue) ===== */
+        .edited { color: #2563eb !important; }
+        .edited b, .edited span { color: #2563eb !important; }
+
+        /* ===== SIMULATION MODAL ===== */
+        .sim-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); z-index: 6000;
+            display: flex; align-items: stretch; justify-content: center;
+            padding: 30px;
+        }
+        .sim-panel {
+            background: #fff; border-radius: 10px; width: 100%; max-width: 1000px;
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.4);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px;
+        }
+        .sim-header {
+            background: #1e40af; color: #fff; padding: 14px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .sim-header h2 { margin: 0; font-size: 16px; }
+        .sim-close {
+            background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #fff;
+            padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;
+        }
+        .sim-close:hover { background: rgba(255,255,255,0.15); }
+        .sim-body { flex: 1; overflow-y: auto; padding: 20px; }
+        .sim-tabs { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 16px; }
+        .sim-tab {
+            padding: 8px 20px; cursor: pointer; border: none; background: none;
+            font-size: 13px; font-weight: 500; color: #6b7280; border-bottom: 2px solid transparent;
+            margin-bottom: -2px; font-family: inherit;
+        }
+        .sim-tab.active { color: #1e40af; border-bottom-color: #1e40af; }
+        .sim-tab:hover { color: #1e40af; }
+
+        .sim-table { width: 100%; border-collapse: collapse; }
+        .sim-table th { text-align: left; padding: 6px 8px; font-size: 11px; text-transform: uppercase; color: #9ca3af; border-bottom: 1px solid #e5e7eb; }
+        .sim-table td { padding: 5px 8px; border-bottom: 1px solid #f3f4f6; }
+        .sim-table tr.formula-row td { background: #f0f9ff; font-weight: 600; }
+        .sim-table tr.total-row td { background: #dbeafe; font-weight: 700; border-top: 2px solid #1e40af; }
+        .sim-table tr.grand-total-row td { background: #1e40af; color: #fff; font-weight: 700; }
+        .sim-table tr.section-row td { font-weight: 600; color: #374151; padding-top: 12px; }
+        .sim-table tr.subsection-row td { font-weight: 600; color: #6b7280; font-size: 12px; }
+
+        .sim-input {
+            width: 110px; text-align: right; padding: 3px 6px; border: 1px solid #d1d5db;
+            border-radius: 4px; font-family: 'SF Mono', monospace; font-size: 13px;
+        }
+        .sim-input:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
+        .sim-computed {
+            font-family: 'SF Mono', monospace; font-size: 13px; font-weight: 600;
+            color: #1e40af; text-align: right; display: inline-block; min-width: 110px;
+        }
+        .sim-computed.negative { color: #dc2626; }
+        .sim-formula { font-size: 11px; color: #9ca3af; font-family: monospace; }
+
+        .sim-check { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding: 10px; border-radius: 6px; font-weight: 600; }
+        .sim-check.balanced { background: #d1fae5; color: #065f46; }
+        .sim-check.unbalanced { background: #fee2e2; color: #991b1b; }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 8px;
+            font-family: -apple-system, sans-serif; font-size: 13px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3); z-index: 9000;
+            animation: toast-in .3s ease;
+        }
+        @keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+        /* ===== PRINT ===== */
+        @media print {
+            #toolbar { display: none; }
+            #annotation-overlay { display: none; }
+            .row-controls { display: none !important; }
+            [contenteditable] { border-bottom: none !important; }
+            body { padding: 0; }
+            #statements-container { padding: 10px; }
+            .edited { color: #000 !important; }
+        }
+    </style>
+</head>
+<body data-tool="edit">
+
+<!-- ===== TOOLBAR ===== -->
+<div id="toolbar">
+    <button class="tool-btn active" data-tool="edit" title="Modo edición">&#9998; Editar</button>
+    <div class="tool-divider"></div>
+    <span class="tool-label">Anotar:</span>
+    <button class="tool-btn" data-tool="arrow" title="Dibujar flecha">&#10132; Flecha</button>
+    <button class="tool-btn" data-tool="circle" title="Dibujar círculo">&#9711; Círculo</button>
+    <button class="tool-btn" data-tool="note" title="Agregar nota">&#9782; Nota</button>
+    <div class="tool-divider"></div>
+    <span class="tool-label">Color:</span>
+    <input type="color" id="ann-color" value="#e74c3c" title="Color de anotación">
+    <div class="tool-divider"></div>
+    <button class="tool-btn" id="btn-clear-ann" title="Borrar todas las anotaciones">&#10006; Limpiar</button>
+    <div class="tool-divider"></div>
+    <button class="tool-btn" id="btn-simulate" title="Simulación numérica" style="background:#1e40af;border-color:#1e40af;">&#9881; Simular</button>
+    <div style="flex:1"></div>
+    <button class="tool-btn" id="btn-json" title="Copiar ediciones como JSON">{ } JSON</button>
+    <button class="tool-btn" id="btn-reset" title="Reiniciar a valores originales">&#8634; Reiniciar</button>
+    <div class="tool-divider"></div>
+    <button class="tool-btn" onclick="window.print()" title="Imprimir">&#128424; Imprimir</button>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div id="statements-container"></div>
+
+<!-- ===== ANNOTATION SVG OVERLAY ===== -->
+<svg id="annotation-overlay">
+    <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="context-stroke"/>
+        </marker>
+    </defs>
+</svg>
+
+<!-- ===== MODAL CONTAINER ===== -->
+<div id="modal-root"></div>
+
+<script>
+// ============================================================
+// SECTION 1: DATA MODEL
+// ============================================================
+
+const STOPWORDS = new Set(['de','en','a','la','los','las','y','del','al','por','el','neto','sobre']);
+
+function deriveAbbr(label) {
+    let cleaned = label.replace(/\([^)]*\)/g, '').trim();
+    const sobreParts = cleaned.split(/\s+sobre\s+/i);
+    if (sobreParts.length > 1) {
+        return getInitials(sobreParts[0]) + '/' + getInitials(sobreParts.slice(1).join(' '));
+    }
+    return getInitials(cleaned);
+}
+
+function getInitials(phrase) {
+    return phrase.split(/\s+/)
+        .filter(w => w.length > 0 && !STOPWORDS.has(w.toLowerCase()))
+        .map(w => w[0].toUpperCase())
+        .join('');
+}
+
+function getAbbr(line) {
+    if (line.abbreviation) return line.abbreviation;
+    if (line.noAbbr) return '';
+    return deriveAbbr(line.label);
+}
+
+let nextId = 1;
+function uid() { return 'L' + (nextId++); }
+
+// --- ERI Data ---
+const eriData = {
+    id: 'eri',
+    header: {
+        companyName: 'X, S.A. de CV',
+        title: 'Estado de resultado integral',
+        subtitle: 'Por el periodo/ejercicio terminado al __________ fecha específica (del XX al XX de XXXX de XXXX)'
+    },
+    lines: [
+        { id: uid(), label: 'Ventas', indent: 1, formulaRef: 'right', formulaRefLabel: 'VT', role: 'standalone' },
+        { id: uid(), label: 'Devoluciones sobre ventas', indent: 2, groupId: 'bg-ded', role: 'group-member' },
+        { id: uid(), label: 'Descuentos sobre ventas', indent: 2, groupId: 'bg-ded', role: 'group-member' },
+        { id: uid(), label: 'Rebajas sobre ventas', indent: 2, groupId: 'bg-ded', role: 'group-member' },
+        { id: uid(), label: 'Ventas Netas', indent: 1, formulaRef: 'right', formulaRefLabel: 'VN', role: 'formula-result' },
+        { id: uid(), label: 'Costo de ventas', indent: 1, formulaRef: 'mid', formulaRefStyle: 'uline', role: 'standalone', noAbbr: true, formulaRefLabel: '(CV)' },
+        { id: uid(), label: 'Utilidad (Pérdida) bruta', indent: 1, bold: true, formulaRef: 'right', formulaRefLabel: 'UB', role: 'formula-result' },
+        { id: uid(), label: 'Gastos Generales', indent: 1, role: 'section-header', noAbbr: true },
+        { id: uid(), label: 'Gastos de administración', indent: 2, groupId: 'bg-gg', role: 'group-member' },
+        { id: uid(), label: 'Gastos de venta', indent: 2, groupId: 'bg-gg', role: 'group-member' },
+        { id: uid(), label: 'Utilidad (Pérdida) de operación', indent: 1, bold: true, formulaRef: 'right', formulaRefLabel: 'UO', role: 'formula-result' },
+        { id: uid(), label: 'Otros ingresos y gastos neto', indent: 1, role: 'section-header', noAbbr: true },
+        { id: uid(), label: 'Otros productos', indent: 2, groupId: 'bg-opgn', role: 'group-member' },
+        { id: uid(), label: 'Otros gastos', indent: 2, groupId: 'bg-opgn', role: 'group-member' },
+        { id: uid(), label: 'Resultado integral de financiamiento', indent: 1, role: 'section-header', noAbbr: true },
+        { id: uid(), label: 'Productos financieros', indent: 2, groupId: 'bg-rif', role: 'group-member' },
+        { id: uid(), label: 'Gastos financieros', indent: 2, groupId: 'bg-rif', role: 'group-member' },
+        { id: uid(), label: 'Utilidad en cambios', indent: 2, groupId: 'bg-rif', role: 'group-member' },
+        { id: uid(), label: 'Pérdida en cambios', indent: 2, groupId: 'bg-rif', role: 'group-member' },
+        { id: uid(), label: 'Utilidad (Pérdida) antes de impuestos', indent: 1, bold: true, formulaRef: 'right', formulaRefLabel: 'UAI', role: 'formula-result' },
+        { id: uid(), label: 'Impuesto a la utilidad', indent: 1, formulaRef: 'right', formulaRefStyle: 'uline', formulaRefLabel: '(x)', role: 'standalone' },
+        { id: uid(), label: 'Utilidad (Pérdida) Neta', indent: 1, bold: true, formulaRef: 'right', formulaRefStyle: 'dline', formulaRefLabel: 'UN', role: 'formula-result' },
+        { id: uid(), label: 'Utilidad por acción', indent: 1, formulaRef: 'right', formulaRefLabel: 'x', role: 'standalone', topBorder: true, spacerBefore: true },
+    ],
+    groups: [
+        { id: 'bg-ded', resultLabel: '(x)', resultStyle: null },
+        { id: 'bg-gg', resultLabel: '(GG)', resultStyle: 'uline' },
+        { id: 'bg-opgn', resultLabel: '+/- OPGN', resultStyle: null },
+        { id: 'bg-rif', resultLabel: '+/- RIF', resultStyle: null },
+    ],
+    formulaChain: [
+        { result: 'VN', deps: ['VT', 'bg-ded'], desc: 'VN = VT - Deducciones' },
+        { result: 'UB', deps: ['VN', 'CV'], desc: 'UB = VN - CV' },
+        { result: 'UO', deps: ['UB', 'bg-gg'], desc: 'UO = UB - GG' },
+        { result: 'UAI', deps: ['UO', 'bg-opgn', 'bg-rif'], desc: 'UAI = UO ± OPGN ± RIF' },
+        { result: 'UN', deps: ['UAI'], desc: 'UN = UAI - Impuesto' },
+    ]
+};
+
+// --- Balance Data ---
+const balData = {
+    id: 'bal',
+    header: {
+        companyName: 'Cía X',
+        title: 'Estado de situación financiera/Balance General',
+        subtitle: 'Al __________________________ (fecha específica)'
+    },
+    left: {
+        sectionTitle: 'Activo',
+        sections: [
+            {
+                id: 'act-circ', title: 'Corto plazo/Circulante',
+                lines: [
+                    { id: uid(), label: 'Cuentas de Disponible', val: 'x' },
+                    { id: uid(), label: 'Cuentas por cobrar', val: 'x' },
+                    { id: uid(), label: 'Cuentas de Mercancía', val: 'x' },
+                    { id: uid(), label: 'Cuentas de Pagos anticipados', val: 'x', lastInSection: true },
+                ],
+                totalLabel: 'Tot circ'
+            },
+            {
+                id: 'act-nc', title: 'Largo plazo/No circulante',
+                lines: [
+                    { id: uid(), label: 'CXC y Pag Ant LP', val: 'x' },
+                    { id: uid(), label: 'CXC y Pag Ant LP', val: 'x' },
+                    { id: uid(), label: 'Act. tangible', val: 'x', bracketPair: true, bracketSub: 'Depcn acum', bracketSubVal: '(depcn)', bracketResult: 'x' },
+                    { id: uid(), label: 'Act. tangible', val: 'x', bracketPair: true, bracketSub: 'Depcn acum', bracketSubVal: '(depcn)', bracketResult: 'x', lastVal: true },
+                    { id: uid(), label: 'Activo intangible', val: 'x', bracketPair: true, bracketSub: 'Amort acum', bracketSubVal: '(amort)', bracketResult: 'x' },
+                    { id: uid(), label: 'Activo intangible', val: 'x', bracketPair: true, bracketSub: 'Amort acum', bracketSubVal: '(amort)', bracketResult: 'x', lastVal: true },
+                    { id: uid(), label: 'Otros activos (no util)', val: 'x', lastInSection: true },
+                ],
+                totalLabel: 'Tot NC'
+            }
+        ],
+        grandTotalLabel: 'Total/Suma de activos'
+    },
+    right: {
+        sectionTitle: 'Pasivo',
+        sections: [
+            {
+                id: 'pas-cp', title: 'Corto plazo',
+                lines: [
+                    { id: uid(), label: 'Cuentas pas CP', val: 'x' },
+                    { id: uid(), label: 'Cuentas pas CP', val: 'x', lastInSection: true },
+                ],
+                totalLabel: 'Tot PCP'
+            },
+            {
+                id: 'pas-lp', title: 'Largo plazo',
+                lines: [
+                    { id: uid(), label: 'Cuentas pas LP', val: 'x' },
+                    { id: uid(), label: 'Cuentas pas LP', val: 'x', lastInSection: true },
+                ],
+                totalLabel: 'Tot PLP',
+                grandSubTotal: 'Tot P'
+            }
+        ],
+        extraSections: [
+            {
+                sectionTitle: 'Capital contable',
+                subsections: [
+                    {
+                        id: 'cc-cont', title: 'Contribuido',
+                        lines: [
+                            { id: uid(), label: 'Ctas capital contr', val: 'x' },
+                            { id: uid(), label: 'Ctas capital contr', val: 'x', lastInSection: true },
+                        ],
+                        totalLabel: 'Tot Ccont'
+                    },
+                    {
+                        id: 'cc-gan', title: 'Ganado',
+                        lines: [
+                            { id: uid(), label: 'Ctas capital gan', val: 'x' },
+                            { id: uid(), label: 'Resultado pdo/ejer', val: 'x', lastInSection: true },
+                        ],
+                        totalLabel: 'Tot CG',
+                        grandSubTotal: 'TCC'
+                    }
+                ]
+            }
+        ],
+        grandTotalLabel: 'Total/suma pasivo mas capital'
+    }
+};
+
+// --- Annotations ---
+let annotations = [];
+let activeTool = 'edit';
+let drawState = null; // for arrow/circle in-progress
+
+// ============================================================
+// SECTION 2: FORMULA INTEGRITY
+// ============================================================
+
+function checkRemoveIntegrity(lineId) {
+    const line = eriData.lines.find(l => l.id === lineId);
+    if (!line) return { ok: true, warnings: [] };
+    const warnings = [];
+
+    // Cannot remove formula results (VN, UB, UO, UAI, UN)
+    if (line.role === 'formula-result') {
+        warnings.push({ severity: 'error', msg: `"${line.label}" es un resultado de fórmula (${line.formulaRefLabel}) que alimenta cálculos posteriores. No se puede eliminar.` });
+        return { ok: false, warnings };
+    }
+
+    // Check if in a bracket group
+    if (line.groupId) {
+        const groupMembers = eriData.lines.filter(l => l.groupId === line.groupId && l.id !== lineId);
+        if (groupMembers.length === 0) {
+            // Check if group is referenced in formula chain
+            const refs = eriData.formulaChain.filter(f => f.deps.includes(line.groupId));
+            if (refs.length > 0) {
+                warnings.push({ severity: 'error', msg: `"${line.label}" es el último miembro de su grupo. Eliminarlo rompería la fórmula: ${refs.map(r => r.desc).join(', ')}` });
+                return { ok: false, warnings };
+            }
+        } else {
+            warnings.push({ severity: 'info', msg: `El grupo se reducirá de ${groupMembers.length + 1} a ${groupMembers.length} miembros.` });
+        }
+    }
+
+    // Check standalone refs in formula chain
+    const abbr = getAbbr(line);
+    if (abbr && line.role === 'standalone') {
+        const refs = eriData.formulaChain.filter(f => f.deps.includes(abbr));
+        if (refs.length > 0) {
+            warnings.push({ severity: 'error', msg: `"${abbr}" se usa directamente en: ${refs.map(r => r.desc).join(', ')}. Eliminarlo rompería la cadena de fórmulas.` });
+            return { ok: false, warnings };
+        }
+    }
+
+    return { ok: !warnings.some(w => w.severity === 'error'), warnings };
+}
+
+// ============================================================
+// SECTION 3: RENDERING
+// ============================================================
+
+function render() {
+    const container = document.getElementById('statements-container');
+    const scrollY = window.scrollY;
+    container.innerHTML = '';
+    renderERI(container);
+    renderBalance(container);
+    window.scrollTo(0, scrollY);
+}
+
+// --- ERI Renderer ---
+function renderERI(container) {
+    const box = document.createElement('div');
+    box.className = 'box';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'box-header';
+    header.innerHTML = `
+        <div><b contenteditable="true" data-field="eri-companyName">${eriData.header.companyName}</b></div>
+        <div><b contenteditable="true" data-field="eri-title">${eriData.header.title}</b></div>
+        <div style="font-size:12px;" contenteditable="true" data-field="eri-subtitle">${eriData.header.subtitle}</div>
+    `;
+    box.appendChild(header);
+
+    // Build table
+    const table = document.createElement('table');
+    table.className = 'eri-table';
+
+    // Pre-compute group info
+    const groupCounts = {};
+    const groupFirstSeen = {};
+    eriData.groups.forEach(g => {
+        groupCounts[g.id] = eriData.lines.filter(l => l.groupId === g.id).length;
+    });
+
+    eriData.lines.forEach((line, idx) => {
+        // Spacer
+        if (line.spacerBefore) {
+            const spacer = document.createElement('tr');
+            spacer.className = 'spacer';
+            spacer.innerHTML = '<td colspan="5"></td>';
+            table.appendChild(spacer);
+        }
+
+        const tr = document.createElement('tr');
+        if (line.topBorder) tr.style.borderTop = '1px solid #000';
+
+        // --- Column 1: Label with controls ---
+        const tdLabel = document.createElement('td');
+        tdLabel.className = `eri-label indent${line.indent || 0}`;
+        tdLabel.style.position = 'relative';
+
+        const controls = document.createElement('div');
+        controls.className = 'row-controls';
+        controls.innerHTML = `<button class="row-btn" title="Agregar línea">+</button><button class="row-btn remove" title="Eliminar línea">−</button>`;
+        controls.children[0].onclick = (e) => { e.stopPropagation(); addLineAfter(line, idx); };
+        controls.children[1].onclick = (e) => { e.stopPropagation(); removeLine(line, idx); };
+        tdLabel.appendChild(controls);
+
+        const labelSpan = document.createElement('span');
+        labelSpan.contentEditable = true;
+        labelSpan.textContent = line.label;
+        if (line.bold) labelSpan.style.fontWeight = 'bold';
+        labelSpan.addEventListener('blur', () => {
+            const newLabel = labelSpan.textContent.trim();
+            if (newLabel !== line.label) {
+                line.label = newLabel;
+                line.abbreviation = null;
+                render();
+            }
+        });
+        labelSpan.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); labelSpan.blur(); }
+        });
+        tdLabel.appendChild(labelSpan);
+
+        // Per-field note icon
+        const noteIcon = document.createElement('span');
+        noteIcon.className = 'note-icon' + (line.note ? ' has-note' : '');
+        noteIcon.textContent = line.note ? '!' : '?';
+        noteIcon.title = line.note ? 'Editar nota' : 'Agregar nota';
+        tdLabel.appendChild(noteIcon);
+
+        // Note area (shown if note exists or when icon clicked)
+        const noteArea = document.createElement('div');
+        noteArea.className = 'field-note';
+        noteArea.style.display = line.note ? 'block' : 'none';
+        const noteClose = document.createElement('button');
+        noteClose.className = 'field-note-close';
+        noteClose.textContent = '×';
+        noteArea.appendChild(noteClose);
+        const noteTa = document.createElement('textarea');
+        noteTa.value = line.note || '';
+        noteTa.placeholder = 'Escribe una nota sobre este campo...';
+        noteTa.addEventListener('input', () => {
+            line.note = noteTa.value;
+            noteIcon.className = 'note-icon' + (noteTa.value ? ' has-note' : '');
+            noteIcon.textContent = noteTa.value ? '!' : '?';
+            saveToStorage();
+        });
+        noteArea.appendChild(noteTa);
+        tdLabel.appendChild(noteArea);
+
+        noteIcon.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const showing = noteArea.style.display !== 'none';
+            noteArea.style.display = showing ? 'none' : 'block';
+            if (!showing) noteTa.focus();
+        });
+        noteClose.addEventListener('click', (e) => {
+            e.stopPropagation();
+            noteTa.value = '';
+            line.note = '';
+            noteIcon.className = 'note-icon';
+            noteIcon.textContent = '?';
+            noteArea.style.display = 'none';
+            saveToStorage();
+        });
+
+        tr.appendChild(tdLabel);
+
+        // --- Column 2: Abbreviation (for group members) ---
+        const tdAbbr = document.createElement('td');
+        tdAbbr.className = 'eri-c1';
+        if (line.groupId) tdAbbr.textContent = getAbbr(line);
+        tr.appendChild(tdAbbr);
+
+        // --- Column 3: Bracket + group result (rowspan) ---
+        if (line.groupId) {
+            if (!groupFirstSeen[line.groupId]) {
+                // First member of this group — create the bracket cell with rowspan
+                groupFirstSeen[line.groupId] = true;
+                const count = groupCounts[line.groupId];
+                const group = eriData.groups.find(g => g.id === line.groupId);
+                const cell = document.createElement('td');
+                cell.className = 'eri-c2';
+                cell.rowSpan = count;
+                cell.style.verticalAlign = 'middle';
+                cell.style.position = 'relative';
+                if (group && count > 0) {
+                    const svgH = count * 22;
+                    const wrapper = document.createElement('div');
+                    wrapper.style.cssText = 'position:absolute; top:2px; bottom:2px; left:0; display:flex; align-items:center;';
+                    wrapper.innerHTML = `<svg width="16" height="100%" viewBox="0 0 16 ${svgH}" preserveAspectRatio="none" style="height:100%;"><path d="M2,2 Q7,2 7,${svgH*0.35} Q7,${svgH/2-2} 13,${svgH/2} Q7,${svgH/2+2} 7,${svgH*0.65} Q7,${svgH-2} 2,${svgH-2}" fill="none" stroke="#000" stroke-width="1.2"/></svg>`;
+                    cell.appendChild(wrapper);
+                    const rSpan = document.createElement('span');
+                    rSpan.style.marginLeft = '20px';
+                    rSpan.textContent = group.resultLabel;
+                    if (group.resultStyle) rSpan.className = group.resultStyle;
+                    cell.appendChild(rSpan);
+                }
+                tr.appendChild(cell);
+            }
+            // Subsequent members: do NOT add a cell (covered by rowspan)
+        } else {
+            // Not in any group — add empty bracket cell
+            const cell = document.createElement('td');
+            cell.className = 'eri-c2';
+            tr.appendChild(cell);
+        }
+
+        // --- Column 4: Mid formula (CV) ---
+        const tdMid = document.createElement('td');
+        tdMid.className = 'eri-c3';
+        if (line.formulaRef === 'mid') {
+            const span = document.createElement('span');
+            if (line.formulaRefStyle) span.className = line.formulaRefStyle;
+            span.textContent = line.formulaRefLabel || getAbbr(line);
+            tdMid.appendChild(span);
+        }
+        tr.appendChild(tdMid);
+
+        // --- Column 5: Right formula (VT, VN, UB, etc.) ---
+        const tdRight = document.createElement('td');
+        tdRight.className = 'eri-c4';
+        if (line.formulaRef === 'right') {
+            const span = document.createElement('span');
+            if (line.formulaRefStyle) span.className = line.formulaRefStyle;
+            span.textContent = line.formulaRefLabel || getAbbr(line);
+            tdRight.appendChild(span);
+        }
+        tr.appendChild(tdRight);
+
+        table.appendChild(tr);
+    });
+
+    box.appendChild(table);
+
+    // Header blur handlers
+    box.querySelectorAll('[data-field]').forEach(el => {
+        el.addEventListener('blur', () => {
+            const field = el.dataset.field;
+            if (field === 'eri-companyName') eriData.header.companyName = el.textContent.trim();
+            if (field === 'eri-title') eriData.header.title = el.textContent.trim();
+            if (field === 'eri-subtitle') eriData.header.subtitle = el.textContent.trim();
+            // Mark as edited if different from original
+            const origField = field.replace('eri-', '');
+            if (ORIGINALS && ORIGINALS.eri && ORIGINALS.eri.header[origField] && el.textContent.trim() !== ORIGINALS.eri.header[origField]) {
+                el.classList.add('edited');
+            } else {
+                el.classList.remove('edited');
+            }
+            saveToStorage();
+        });
+    });
+
+    container.appendChild(box);
+}
+
+// --- Balance Sheet Renderer ---
+function renderBalance(container) {
+    const box = document.createElement('div');
+    box.className = 'box';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'box-header';
+    header.innerHTML = `
+        <div><b contenteditable="true">${balData.header.companyName}</b></div>
+        <div><b contenteditable="true">${balData.header.title}</b></div>
+        <div style="font-size:12px;" contenteditable="true">${balData.header.subtitle}</div>
+    `;
+    box.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.className = 'bal-grid';
+
+    // LEFT SIDE (Activo)
+    grid.appendChild(renderBalSide(balData.left, 'left'));
+
+    // RIGHT SIDE (Pasivo + Capital)
+    grid.appendChild(renderBalSide(balData.right, 'right'));
+
+    box.appendChild(grid);
+    container.appendChild(box);
+}
+
+function renderBalSide(sideData, side) {
+    const div = document.createElement('div');
+    div.className = side === 'left' ? 'bal-left' : 'bal-right';
+    const table = document.createElement('table');
+    table.className = 'bal-table';
+
+    // Section title
+    const trTitle = document.createElement('tr');
+    trTitle.innerHTML = `<td class="section-head" colspan="4" contenteditable="true">${sideData.sectionTitle}</td>`;
+    table.appendChild(trTitle);
+
+    // Sections
+    sideData.sections.forEach(section => {
+        renderBalSection(table, section, side);
+    });
+
+    // Extra sections (Capital contable for right side)
+    if (sideData.extraSections) {
+        sideData.extraSections.forEach(extra => {
+            const spacer2 = document.createElement('tr');
+            spacer2.className = 'spacer';
+            spacer2.innerHTML = '<td colspan="4"></td>';
+            table.appendChild(spacer2);
+
+            const trSec = document.createElement('tr');
+            trSec.innerHTML = `<td class="section-head" colspan="4" contenteditable="true">${extra.sectionTitle}</td>`;
+            table.appendChild(trSec);
+
+            extra.subsections.forEach(sub => {
+                renderBalSection(table, sub, side);
+            });
+        });
+    }
+
+    // Grand total
+    const spacer = document.createElement('tr');
+    spacer.className = 'spacer';
+    spacer.innerHTML = '<td colspan="4"></td>';
+    table.appendChild(spacer);
+    const trGrand = document.createElement('tr');
+    if (side === 'left') {
+        trGrand.innerHTML = `<td><b contenteditable="true">${sideData.grandTotalLabel}</b></td><td></td><td style="text-align:right"><span class="red-uline">x</span></td><td></td>`;
+    } else {
+        trGrand.innerHTML = `<td><b contenteditable="true">${sideData.grandTotalLabel}</b></td><td></td><td></td><td style="text-align:right"><span class="red-uline">x</span></td>`;
+    }
+    table.appendChild(trGrand);
+
+    div.appendChild(table);
+    return div;
+}
+
+function renderBalSection(table, section, side) {
+    // Subsection title
+    const trSub = document.createElement('tr');
+    trSub.innerHTML = `<td class="subsection" colspan="4" contenteditable="true">${section.title}</td>`;
+    table.appendChild(trSub);
+
+    section.lines.forEach((line, idx) => {
+        if (line.bracketPair) {
+            // Render bracket pair: main line + sub line with left brace
+            // Main row
+            const tr1 = document.createElement('tr');
+            const tdLabel1 = document.createElement('td');
+            tdLabel1.className = 'indent1';
+            tdLabel1.style.position = 'relative';
+            // Controls
+            tdLabel1.innerHTML = `<div class="row-controls"><button class="row-btn" onclick="addBalLine('${section.id}', ${idx})" title="Agregar">+</button><button class="row-btn remove" onclick="removeBalLine('${section.id}', ${idx})" title="Eliminar">−</button></div>`;
+            const span1 = document.createElement('span');
+            span1.contentEditable = true;
+            span1.textContent = line.label;
+            span1.addEventListener('blur', () => { line.label = span1.textContent.trim(); saveToStorage(); });
+            tdLabel1.appendChild(span1);
+            tr1.appendChild(tdLabel1);
+
+            const tdV1 = document.createElement('td');
+            tdV1.style.textAlign = 'right';
+            tdV1.textContent = line.lastVal ? '' : line.val;
+            if (line.lastVal) {
+                tdV1.innerHTML = `<span class="uline">${line.val}</span>`;
+            }
+            tr1.appendChild(tdV1);
+
+            // Bracket cell with rowspan=2 and left-facing brace
+            const tdBrace = document.createElement('td');
+            tdBrace.rowSpan = 2;
+            tdBrace.style.cssText = 'text-align:right; vertical-align:middle; position:relative; width:40px;';
+            const braceWrapper = document.createElement('div');
+            braceWrapper.style.cssText = 'position:absolute; top:2px; bottom:2px; left:0; display:flex; align-items:center;';
+            braceWrapper.innerHTML = `<svg width="12" height="100%" viewBox="0 0 12 40" preserveAspectRatio="none" style="height:100%;"><path d="M10,2 Q4,2 4,10 Q4,18 1,20 Q4,22 4,30 Q4,38 10,38" fill="none" stroke="#000" stroke-width="1"/></svg>`;
+            tdBrace.appendChild(braceWrapper);
+            const rSpan = document.createElement('span');
+            rSpan.style.marginLeft = '14px';
+            rSpan.textContent = line.bracketResult;
+            tdBrace.appendChild(rSpan);
+            tr1.appendChild(tdBrace);
+
+            tr1.appendChild(document.createElement('td'));
+            table.appendChild(tr1);
+
+            // Sub row (depreciation/amortization)
+            const tr2 = document.createElement('tr');
+            const tdLabel2 = document.createElement('td');
+            tdLabel2.className = 'indent2';
+            const span2 = document.createElement('span');
+            span2.contentEditable = true;
+            span2.textContent = line.bracketSub;
+            span2.addEventListener('blur', () => { line.bracketSub = span2.textContent.trim(); saveToStorage(); });
+            tdLabel2.appendChild(span2);
+            tr2.appendChild(tdLabel2);
+
+            const tdV2 = document.createElement('td');
+            tdV2.style.textAlign = 'right';
+            tdV2.textContent = line.bracketSubVal;
+            tr2.appendChild(tdV2);
+            // rowspan covers brace cell
+            tr2.appendChild(document.createElement('td'));
+            table.appendChild(tr2);
+        } else {
+            // Simple line
+            const tr = document.createElement('tr');
+            const tdLabel = document.createElement('td');
+            tdLabel.className = 'indent1';
+            tdLabel.style.position = 'relative';
+            tdLabel.innerHTML = `<div class="row-controls"><button class="row-btn" onclick="addBalLine('${section.id}', ${idx})" title="Agregar">+</button><button class="row-btn remove" onclick="removeBalLine('${section.id}', ${idx})" title="Eliminar">−</button></div>`;
+            const span = document.createElement('span');
+            span.contentEditable = true;
+            span.textContent = line.label;
+            span.addEventListener('blur', () => { line.label = span.textContent.trim(); saveToStorage(); });
+            tdLabel.appendChild(span);
+            // Note icon for balance lines
+            const bNoteIcon = document.createElement('span');
+            bNoteIcon.className = 'note-icon' + (line.note ? ' has-note' : '');
+            bNoteIcon.textContent = line.note ? '!' : '?';
+            bNoteIcon.title = line.note ? 'Editar nota' : 'Agregar nota';
+            tdLabel.appendChild(bNoteIcon);
+            const bNoteArea = document.createElement('div');
+            bNoteArea.className = 'field-note';
+            bNoteArea.style.display = line.note ? 'block' : 'none';
+            const bNoteClose = document.createElement('button');
+            bNoteClose.className = 'field-note-close';
+            bNoteClose.textContent = '×';
+            bNoteArea.appendChild(bNoteClose);
+            const bNoteTa = document.createElement('textarea');
+            bNoteTa.value = line.note || '';
+            bNoteTa.placeholder = 'Nota sobre este campo...';
+            bNoteTa.addEventListener('input', () => { line.note = bNoteTa.value; bNoteIcon.className = 'note-icon' + (bNoteTa.value ? ' has-note' : ''); bNoteIcon.textContent = bNoteTa.value ? '!' : '?'; saveToStorage(); });
+            bNoteArea.appendChild(bNoteTa);
+            tdLabel.appendChild(bNoteArea);
+            bNoteIcon.addEventListener('click', (e) => { e.stopPropagation(); const s = bNoteArea.style.display !== 'none'; bNoteArea.style.display = s ? 'none' : 'block'; if (!s) bNoteTa.focus(); });
+            bNoteClose.addEventListener('click', (e) => { e.stopPropagation(); bNoteTa.value = ''; line.note = ''; bNoteIcon.className = 'note-icon'; bNoteIcon.textContent = '?'; bNoteArea.style.display = 'none'; saveToStorage(); });
+            tr.appendChild(tdLabel);
+
+            const tdV = document.createElement('td');
+            tdV.style.textAlign = 'right';
+            if (line.lastInSection) {
+                tdV.innerHTML = `<span class="uline">${line.val}</span>`;
+            } else {
+                tdV.textContent = line.val;
+            }
+            tr.appendChild(tdV);
+
+            const tdTotal = document.createElement('td');
+            tdTotal.style.textAlign = 'right';
+            if (line.lastInSection && section.totalLabel) {
+                tdTotal.textContent = section.totalLabel;
+            }
+            tr.appendChild(tdTotal);
+
+            // 4th column for grandSubTotal
+            const td4 = document.createElement('td');
+            td4.style.textAlign = 'right';
+            if (line.lastInSection && section.grandSubTotal) {
+                td4.textContent = section.grandSubTotal;
+            }
+            tr.appendChild(td4);
+
+            table.appendChild(tr);
+        }
+    });
+}
+
+// ============================================================
+// SECTION 4: ADD/REMOVE LINES
+// ============================================================
+
+function addLineAfter(line, idx) {
+    const newLine = {
+        id: uid(),
+        label: 'Nueva partida',
+        indent: line.indent,
+        role: line.groupId ? 'group-member' : 'standalone',
+        groupId: line.groupId || null,
+    };
+    eriData.lines.splice(idx + 1, 0, newLine);
+    render();
+}
+
+function removeLine(line, idx) {
+    const result = checkRemoveIntegrity(line.id);
+    if (!result.ok) {
+        showModal({
+            icon: '&#9888;',
+            iconClass: 'severity-error',
+            title: 'No se puede eliminar',
+            messages: result.warnings.map(w => w.msg),
+            actions: [{ label: 'Entendido', class: 'primary', action: 'close' }]
+        });
+        return;
+    }
+    if (result.warnings.length > 0) {
+        showModal({
+            icon: '&#9888;',
+            iconClass: 'severity-info',
+            title: '¿Eliminar línea?',
+            messages: [`Se eliminará: "${line.label}"`, ...result.warnings.map(w => w.msg)],
+            actions: [
+                { label: 'Cancelar', class: '', action: 'close' },
+                { label: 'Eliminar', class: 'danger', action: () => { doRemoveLine(idx); } }
+            ]
+        });
+        return;
+    }
+    doRemoveLine(idx);
+}
+
+function doRemoveLine(idx) {
+    eriData.lines.splice(idx, 1);
+    render();
+}
+
+// Balance add/remove
+function findBalSection(sectionId) {
+    for (const sec of balData.left.sections) { if (sec.id === sectionId) return sec; }
+    for (const sec of balData.right.sections) { if (sec.id === sectionId) return sec; }
+    if (balData.right.extraSections) {
+        for (const extra of balData.right.extraSections) {
+            for (const sub of extra.subsections) { if (sub.id === sectionId) return sub; }
+        }
+    }
+    return null;
+}
+
+window.addBalLine = function(sectionId, afterIdx) {
+    const section = findBalSection(sectionId);
+    if (!section) return;
+    const newLine = { id: uid(), label: 'Nueva partida', val: 'x' };
+    section.lines.splice(afterIdx + 1, 0, newLine);
+    render();
+};
+
+window.removeBalLine = function(sectionId, idx) {
+    const section = findBalSection(sectionId);
+    if (!section || section.lines.length <= 1) return;
+    // If removing the lastInSection line, move that flag to the new last
+    const wasLast = section.lines[idx].lastInSection;
+    section.lines.splice(idx, 1);
+    if (wasLast && section.lines.length > 0) {
+        section.lines[section.lines.length - 1].lastInSection = true;
+    }
+    render();
+};
+
+// ============================================================
+// SECTION 5: MODAL
+// ============================================================
+
+function showModal({ icon, iconClass, title, messages, actions }) {
+    const root = document.getElementById('modal-root');
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `<h3><span class="warning-icon ${iconClass || ''}">${icon || ''}</span>${title}</h3>`;
+    messages.forEach(m => {
+        const p = document.createElement('p');
+        p.textContent = m;
+        modal.appendChild(p);
+    });
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'modal-actions';
+    actions.forEach(a => {
+        const btn = document.createElement('button');
+        btn.className = `modal-btn ${a.class || ''}`;
+        btn.textContent = a.label;
+        btn.onclick = () => {
+            overlay.remove();
+            if (typeof a.action === 'function') a.action();
+        };
+        actionsDiv.appendChild(btn);
+    });
+    modal.appendChild(actionsDiv);
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    root.appendChild(overlay);
+}
+
+// ============================================================
+// SECTION 6: ANNOTATIONS
+// ============================================================
+
+function renderAnnotations() {
+    const svg = document.getElementById('annotation-overlay');
+    // Keep defs, clear rest
+    const defs = svg.querySelector('defs');
+    svg.innerHTML = '';
+    svg.appendChild(defs);
+
+    annotations.forEach(ann => {
+        if (ann.type === 'arrow') {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', ann.x1);
+            line.setAttribute('y1', ann.y1);
+            line.setAttribute('x2', ann.x2);
+            line.setAttribute('y2', ann.y2);
+            line.setAttribute('stroke', ann.color);
+            line.setAttribute('stroke-width', '2.5');
+            line.setAttribute('marker-end', 'url(#arrowhead)');
+            line.style.pointerEvents = 'stroke';
+            line.style.cursor = 'pointer';
+            line.dataset.annId = ann.id;
+            line.addEventListener('contextmenu', (e) => { e.preventDefault(); deleteAnnotation(ann.id); });
+            svg.appendChild(line);
+        } else if (ann.type === 'circle') {
+            const el = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+            el.setAttribute('cx', ann.cx);
+            el.setAttribute('cy', ann.cy);
+            el.setAttribute('rx', ann.rx);
+            el.setAttribute('ry', ann.ry);
+            el.setAttribute('stroke', ann.color);
+            el.setAttribute('stroke-width', '2.5');
+            el.setAttribute('fill', 'none');
+            el.style.pointerEvents = 'stroke';
+            el.style.cursor = 'pointer';
+            el.addEventListener('contextmenu', (e) => { e.preventDefault(); deleteAnnotation(ann.id); });
+            svg.appendChild(el);
+        } else if (ann.type === 'note') {
+            const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+            fo.setAttribute('x', ann.x);
+            fo.setAttribute('y', ann.y);
+            fo.setAttribute('width', '180');
+            fo.setAttribute('height', '120');
+            fo.style.overflow = 'visible';
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'ann-note';
+            noteDiv.style.borderLeftColor = ann.color;
+            noteDiv.style.borderLeftWidth = '3px';
+            const ta = document.createElement('textarea');
+            ta.value = ann.text || '';
+            ta.addEventListener('input', () => { ann.text = ta.value; });
+            ta.style.pointerEvents = 'auto';
+            noteDiv.appendChild(ta);
+            const delBtn = document.createElement('button');
+            delBtn.className = 'ann-delete';
+            delBtn.textContent = '×';
+            delBtn.style.pointerEvents = 'auto';
+            delBtn.onclick = () => deleteAnnotation(ann.id);
+            noteDiv.appendChild(delBtn);
+            fo.appendChild(noteDiv);
+            svg.appendChild(fo);
+        }
+    });
+}
+
+function deleteAnnotation(id) {
+    annotations = annotations.filter(a => a.id !== id);
+    renderAnnotations();
+}
+
+// ============================================================
+// SECTION 7: TOOLBAR & TOOL MODES
+// ============================================================
+
+document.querySelectorAll('#toolbar .tool-btn[data-tool]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        activeTool = btn.dataset.tool;
+        document.body.dataset.tool = activeTool;
+        document.querySelectorAll('#toolbar .tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        drawState = null;
+    });
+});
+
+document.getElementById('btn-clear-ann').addEventListener('click', () => {
+    if (annotations.length === 0) return;
+    showModal({
+        icon: '&#10006;',
+        title: '¿Limpiar anotaciones?',
+        messages: [`Se eliminarán ${annotations.length} anotación(es).`],
+        actions: [
+            { label: 'Cancelar', class: '', action: 'close' },
+            { label: 'Limpiar', class: 'danger', action: () => { annotations = []; renderAnnotations(); } }
+        ]
+    });
+});
+
+// ============================================================
+// SECTION 8: ANNOTATION INTERACTION HANDLERS
+// ============================================================
+
+const overlay = document.getElementById('annotation-overlay');
+let previewEl = null;
+
+overlay.addEventListener('mousedown', (e) => {
+    if (activeTool === 'edit') return;
+    const rect = overlay.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+
+    if (activeTool === 'arrow') {
+        drawState = { x1: x, y1: y };
+        // Create preview line
+        previewEl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        previewEl.setAttribute('x1', x);
+        previewEl.setAttribute('y1', y);
+        previewEl.setAttribute('x2', x);
+        previewEl.setAttribute('y2', y);
+        previewEl.setAttribute('stroke', document.getElementById('ann-color').value);
+        previewEl.setAttribute('stroke-width', '2');
+        previewEl.setAttribute('stroke-dasharray', '5,3');
+        previewEl.setAttribute('marker-end', 'url(#arrowhead)');
+        previewEl.style.pointerEvents = 'none';
+        overlay.appendChild(previewEl);
+    } else if (activeTool === 'circle') {
+        drawState = { x1: x, y1: y };
+        previewEl = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+        previewEl.setAttribute('stroke', document.getElementById('ann-color').value);
+        previewEl.setAttribute('stroke-width', '2');
+        previewEl.setAttribute('stroke-dasharray', '5,3');
+        previewEl.setAttribute('fill', 'none');
+        previewEl.style.pointerEvents = 'none';
+        overlay.appendChild(previewEl);
+    } else if (activeTool === 'note') {
+        const color = document.getElementById('ann-color').value;
+        annotations.push({
+            id: 'ann-' + Date.now(),
+            type: 'note',
+            x: x, y: y,
+            text: '',
+            color: color
+        });
+        renderAnnotations();
+        // Focus the new textarea
+        setTimeout(() => {
+            const notes = overlay.querySelectorAll('.ann-note textarea');
+            if (notes.length > 0) notes[notes.length - 1].focus();
+        }, 50);
+    }
+});
+
+overlay.addEventListener('mousemove', (e) => {
+    if (!drawState || !previewEl) return;
+    const x = e.clientX;
+    const y = e.clientY;
+
+    if (activeTool === 'arrow') {
+        previewEl.setAttribute('x2', x);
+        previewEl.setAttribute('y2', y);
+    } else if (activeTool === 'circle') {
+        const cx = (drawState.x1 + x) / 2;
+        const cy = (drawState.y1 + y) / 2;
+        const rx = Math.abs(x - drawState.x1) / 2;
+        const ry = Math.abs(y - drawState.y1) / 2;
+        previewEl.setAttribute('cx', cx);
+        previewEl.setAttribute('cy', cy);
+        previewEl.setAttribute('rx', rx);
+        previewEl.setAttribute('ry', ry);
+    }
+});
+
+overlay.addEventListener('mouseup', (e) => {
+    if (!drawState) return;
+    const x = e.clientX;
+    const y = e.clientY;
+    const color = document.getElementById('ann-color').value;
+
+    if (activeTool === 'arrow') {
+        const dist = Math.hypot(x - drawState.x1, y - drawState.y1);
+        if (dist > 10) {
+            annotations.push({
+                id: 'ann-' + Date.now(),
+                type: 'arrow',
+                x1: drawState.x1, y1: drawState.y1,
+                x2: x, y2: y,
+                color: color
+            });
+        }
+    } else if (activeTool === 'circle') {
+        const rx = Math.abs(x - drawState.x1) / 2;
+        const ry = Math.abs(y - drawState.y1) / 2;
+        if (rx > 5 && ry > 5) {
+            annotations.push({
+                id: 'ann-' + Date.now(),
+                type: 'circle',
+                cx: (drawState.x1 + x) / 2,
+                cy: (drawState.y1 + y) / 2,
+                rx: rx, ry: ry,
+                color: color
+            });
+        }
+    }
+
+    if (previewEl) { previewEl.remove(); previewEl = null; }
+    drawState = null;
+    renderAnnotations();
+});
+
+// ============================================================
+// SECTION 9: ORIGINAL DATA SNAPSHOT + EDIT TRACKING
+// ============================================================
+
+// Deep clone the original data for edit tracking + reset
+const ORIGINALS = {
+    eri: JSON.parse(JSON.stringify(eriData)),
+    bal: JSON.parse(JSON.stringify(balData))
+};
+
+const STORAGE_KEY = 'ef-editor-state';
+
+function saveToStorage() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            eri: { header: eriData.header, lines: eriData.lines, groups: eriData.groups },
+            bal: balData,
+            annotations: annotations,
+            savedAt: new Date().toISOString()
+        }));
+    } catch(e) { /* quota exceeded, ignore */ }
+}
+
+function loadFromStorage() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const saved = JSON.parse(raw);
+        if (saved.eri) {
+            eriData.header = saved.eri.header;
+            eriData.lines = saved.eri.lines;
+            if (saved.eri.groups) eriData.groups = saved.eri.groups;
+        }
+        if (saved.bal) {
+            Object.assign(balData, saved.bal);
+        }
+        if (saved.annotations) annotations = saved.annotations;
+        return true;
+    } catch(e) { return false; }
+}
+
+function isEdited(currentVal, originalVal) {
+    return currentVal !== originalVal;
+}
+
+function getEditsDiff() {
+    const edits = { eri: {}, bal: {}, timestamp: new Date().toISOString() };
+    // ERI header
+    for (const key of Object.keys(eriData.header)) {
+        if (eriData.header[key] !== ORIGINALS.eri.header[key]) {
+            if (!edits.eri.header) edits.eri.header = {};
+            edits.eri.header[key] = { original: ORIGINALS.eri.header[key], edited: eriData.header[key] };
+        }
+    }
+    // ERI lines
+    const eriLineEdits = [];
+    eriData.lines.forEach((line, i) => {
+        const orig = ORIGINALS.eri.lines.find(o => o.id === line.id);
+        if (!orig) {
+            eriLineEdits.push({ action: 'added', index: i, label: line.label, abbr: getAbbr(line) });
+        } else if (line.label !== orig.label) {
+            eriLineEdits.push({ action: 'renamed', id: line.id, original: orig.label, edited: line.label, abbr: getAbbr(line) });
+        }
+    });
+    ORIGINALS.eri.lines.forEach(orig => {
+        if (!eriData.lines.find(l => l.id === orig.id)) {
+            eriLineEdits.push({ action: 'removed', id: orig.id, label: orig.label });
+        }
+    });
+    if (eriLineEdits.length > 0) edits.eri.lines = eriLineEdits;
+
+    // Balance sections
+    const balEdits = [];
+    function diffBalLines(current, original, path) {
+        current.forEach((line, i) => {
+            const orig = original.find(o => o.id === line.id);
+            if (!orig) {
+                balEdits.push({ action: 'added', path, index: i, label: line.label });
+            } else if (line.label !== orig.label) {
+                balEdits.push({ action: 'renamed', path, id: line.id, original: orig.label, edited: line.label });
+            }
+        });
+        original.forEach(orig => {
+            if (!current.find(l => l.id === orig.id)) {
+                balEdits.push({ action: 'removed', path, id: orig.id, label: orig.label });
+            }
+        });
+    }
+    balData.left.sections.forEach((sec, si) => {
+        const origSec = ORIGINALS.bal.left.sections[si];
+        if (origSec) diffBalLines(sec.lines, origSec.lines, `activo/${sec.id}`);
+    });
+    balData.right.sections.forEach((sec, si) => {
+        const origSec = ORIGINALS.bal.right.sections[si];
+        if (origSec) diffBalLines(sec.lines, origSec.lines, `pasivo/${sec.id}`);
+    });
+    if (balData.right.extraSections) {
+        balData.right.extraSections.forEach(extra => {
+            extra.subsections.forEach((sub, si) => {
+                const origExtra = ORIGINALS.bal.right.extraSections[0];
+                if (origExtra && origExtra.subsections[si]) {
+                    diffBalLines(sub.lines, origExtra.subsections[si].lines, `capital/${sub.id}`);
+                }
+            });
+        });
+    }
+    if (balEdits.length > 0) edits.bal.lines = balEdits;
+
+    // Editor field notes (ERI)
+    const eriNotes = [];
+    eriData.lines.forEach(line => {
+        if (line.note && line.note.trim()) {
+            eriNotes.push({ field: line.label, abbr: getAbbr(line), note: line.note.trim() });
+        }
+    });
+    if (eriNotes.length > 0) {
+        if (!edits.eri) edits.eri = {};
+        edits.eri.notes = eriNotes;
+    }
+
+    // Editor field notes (Balance)
+    const balNotes = [];
+    function collectBalNotes(sections, path) {
+        sections.forEach(sec => {
+            sec.lines.forEach(line => {
+                if (line.note && line.note.trim()) {
+                    balNotes.push({ field: line.label, section: path + '/' + sec.id, note: line.note.trim() });
+                }
+            });
+        });
+    }
+    collectBalNotes(balData.left.sections, 'activo');
+    collectBalNotes(balData.right.sections, 'pasivo');
+    if (balData.right.extraSections) {
+        balData.right.extraSections.forEach(extra => {
+            collectBalNotes(extra.subsections, 'capital');
+        });
+    }
+    if (balNotes.length > 0) {
+        if (!edits.bal) edits.bal = {};
+        edits.bal.notes = balNotes;
+    }
+
+    // Simulation notes
+    const sNotes = window._simNotes || {};
+    const simNoteEntries = Object.entries(sNotes).filter(([k, v]) => v && v.trim());
+    if (simNoteEntries.length > 0) {
+        edits.simulationNotes = {};
+        simNoteEntries.forEach(([key, val]) => {
+            edits.simulationNotes[key] = val.trim();
+        });
+    }
+
+    // Clean empty
+    if (edits.eri && Object.keys(edits.eri).length === 0) delete edits.eri;
+    if (edits.bal && Object.keys(edits.bal).length === 0) delete edits.bal;
+    return edits;
+}
+
+// Patch render to save + show blue for edited
+const _origRender = render;
+render = function() {
+    _origRender();
+    markEditedElements();
+    saveToStorage();
+};
+
+function markEditedElements() {
+    // ERI lines — compare labels
+    document.querySelectorAll('.eri-table tr').forEach(tr => {
+        const labelSpan = tr.querySelector('[contenteditable]');
+        if (!labelSpan) return;
+        const text = labelSpan.textContent.trim();
+        const orig = ORIGINALS.eri.lines.find(o => o.label === text);
+        if (!orig) {
+            // New or renamed line — mark blue
+            tr.classList.add('edited');
+        }
+    });
+    // ERI header
+    document.querySelectorAll('[data-field]').forEach(el => {
+        const field = el.dataset.field.replace('eri-', '');
+        if (ORIGINALS.eri.header[field] && el.textContent.trim() !== ORIGINALS.eri.header[field]) {
+            el.classList.add('edited');
+        }
+    });
+}
+
+function showToast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+}
+
+// ============================================================
+// SECTION 10: JSON EXPORT, RESET, SIMULATE BUTTONS
+// ============================================================
+
+document.getElementById('btn-json').addEventListener('click', () => {
+    const edits = getEditsDiff();
+    if (!edits.eri && !edits.bal && !edits.simulationNotes) {
+        showToast('No hay ediciones ni notas para exportar');
+        return;
+    }
+    const json = JSON.stringify(edits, null, 2);
+    navigator.clipboard.writeText(json).then(() => {
+        showToast('JSON de ediciones copiado al portapapeles');
+    }).catch(() => {
+        // Fallback: show in a prompt
+        prompt('Copia este JSON:', json);
+    });
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+    showModal({
+        icon: '&#8634;',
+        title: '¿Reiniciar todo?',
+        messages: ['Se perderán todas las ediciones de nombres, líneas agregadas/eliminadas y anotaciones.'],
+        actions: [
+            { label: 'Cancelar', class: '', action: 'close' },
+            { label: 'Reiniciar', class: 'danger', action: () => {
+                // Restore original data
+                eriData.header = JSON.parse(JSON.stringify(ORIGINALS.eri.header));
+                eriData.lines = JSON.parse(JSON.stringify(ORIGINALS.eri.lines));
+                eriData.groups = JSON.parse(JSON.stringify(ORIGINALS.eri.groups));
+                Object.assign(balData, JSON.parse(JSON.stringify(ORIGINALS.bal)));
+                annotations = [];
+                localStorage.removeItem(STORAGE_KEY);
+                render();
+                renderAnnotations();
+                showToast('Reiniciado a valores originales');
+            }}
+        ]
+    });
+});
+
+// ============================================================
+// SECTION 11: SIMULATION POPUP
+// ============================================================
+
+document.getElementById('btn-simulate').addEventListener('click', openSimulation);
+
+function openSimulation() {
+    const ov = document.createElement('div');
+    ov.className = 'sim-overlay';
+    ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+
+    const panel = document.createElement('div');
+    panel.className = 'sim-panel';
+
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'sim-header';
+    hdr.innerHTML = `<h2>&#9881; Simulación Numérica</h2>`;
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'sim-close';
+    closeBtn.textContent = 'Cerrar (Esc)';
+    closeBtn.onclick = () => ov.remove();
+    hdr.appendChild(closeBtn);
+    panel.appendChild(hdr);
+
+    const body = document.createElement('div');
+    body.className = 'sim-body';
+
+    // Tabs
+    const tabs = document.createElement('div');
+    tabs.className = 'sim-tabs';
+    const tabERI = document.createElement('button');
+    tabERI.className = 'sim-tab active';
+    tabERI.textContent = 'Estado de Resultado';
+    const tabBal = document.createElement('button');
+    tabBal.className = 'sim-tab';
+    tabBal.textContent = 'Balance General';
+    tabs.appendChild(tabERI);
+    tabs.appendChild(tabBal);
+    body.appendChild(tabs);
+
+    const contentArea = document.createElement('div');
+    body.appendChild(contentArea);
+    panel.appendChild(body);
+    ov.appendChild(panel);
+    document.body.appendChild(ov);
+
+    // Per-field notes in simulation
+    if (!window._simNotes) window._simNotes = {};
+    const simNotes = window._simNotes;
+
+    function noteBtn(key, label) {
+        const hasNote = simNotes[key];
+        return `<span class="sim-note-icon ${hasNote ? 'has-note' : ''}" data-notekey="${key}" title="${hasNote ? 'Editar nota' : 'Agregar nota'}">${hasNote ? '!' : '?'}</span>`;
+    }
+
+    function noteRow(key) {
+        if (!simNotes[key]) return '';
+        return `<tr><td colspan="4"><div class="sim-note-area"><textarea data-noteta="${key}" placeholder="Nota...">${simNotes[key] || ''}</textarea></div></td></tr>`;
+    }
+
+    // State for simulation values
+    const simState = {
+        // ERI inputs
+        VT: 1000000, DV: 15000, DSV: 5000, RV: 10000,
+        CV: 450000,
+        GA: 120000, GV: 80000,
+        OP: 25000, OG: 12000,
+        PF: 8000, GF: 15000, UC: 3000, PC: 5000,
+        taxRate: 0.30,
+        numShares: 10000,
+        // Balance inputs
+        disponible: 350000, cxc: 280000, mercancia: 190000, pagosAnt: 40000,
+        cxcLP1: 50000, cxcLP2: 30000,
+        tangible1: 500000, depcn1: 120000,
+        tangible2: 300000, depcn2: 80000,
+        intangible1: 100000, amort1: 25000,
+        intangible2: 60000, amort2: 15000,
+        otrosAct: 20000,
+        pasCP1: 180000, pasCP2: 95000,
+        pasLP1: 200000, pasLP2: 150000,
+        capitalContr1: 400000, capitalContr2: 100000,
+        capitalGan: 50000,
+        // resultado del periodo will be UN from ERI
+    };
+
+    function computeERI() {
+        const s = simState;
+        const dedTotal = s.DV + s.DSV + s.RV;
+        const VN = s.VT - dedTotal;
+        const UB = VN - s.CV;
+        const GG = s.GA + s.GV;
+        const UO = UB - GG;
+        const OPGN = s.OP - s.OG;
+        const RIF = s.PF - s.GF + s.UC - s.PC;
+        const UAI = UO + OPGN + RIF;
+        const tax = Math.round(Math.max(0, UAI) * s.taxRate);
+        const UN = UAI - tax;
+        const UPA = s.numShares > 0 ? UN / s.numShares : 0;
+        return { dedTotal, VN, UB, GG, UO, OPGN, RIF, UAI, tax, UN, UPA };
+    }
+
+    function computeBalance() {
+        const s = simState;
+        const c = computeERI();
+        const totCirc = s.disponible + s.cxc + s.mercancia + s.pagosAnt;
+        const netTang1 = s.tangible1 - s.depcn1;
+        const netTang2 = s.tangible2 - s.depcn2;
+        const netIntang1 = s.intangible1 - s.amort1;
+        const netIntang2 = s.intangible2 - s.amort2;
+        const totNC = s.cxcLP1 + s.cxcLP2 + netTang1 + netTang2 + netIntang1 + netIntang2 + s.otrosAct;
+        const totalActivos = totCirc + totNC;
+
+        const totPCP = s.pasCP1 + s.pasCP2;
+        const totPLP = s.pasLP1 + s.pasLP2;
+        const totP = totPCP + totPLP;
+
+        const totCcont = s.capitalContr1 + s.capitalContr2;
+        const resultadoPeriodo = c.UN;
+        const totCG = s.capitalGan + resultadoPeriodo;
+        const TCC = totCcont + totCG;
+        const totalPasCapital = totP + TCC;
+
+        return { totCirc, netTang1, netTang2, netIntang1, netIntang2, totNC, totalActivos,
+                 totPCP, totPLP, totP, totCcont, resultadoPeriodo, totCG, TCC, totalPasCapital };
+    }
+
+    function fmt(n) {
+        const neg = n < 0;
+        const abs = Math.abs(Math.round(n));
+        const str = abs.toLocaleString('es-MX');
+        return neg ? `(${str})` : `$${str}`;
+    }
+
+    function inp(key) {
+        return `<input class="sim-input" type="number" data-key="${key}" value="${simState[key]}" step="1000">`;
+    }
+
+    function comp(val, formula) {
+        const neg = val < 0;
+        return `<span class="sim-computed ${neg ? 'negative' : ''}">${fmt(val)}</span>${formula ? `<br><span class="sim-formula">${formula}</span>` : ''}`;
+    }
+
+    function renderERITab() {
+        const c = computeERI();
+        contentArea.innerHTML = `
+        <table class="sim-table">
+            <thead><tr><th style="width:40%">Concepto</th><th style="width:12%">Abrev.</th><th style="width:22%">Valor</th><th style="width:26%">Resultado</th></tr></thead>
+            <tbody>
+                <tr><td>Ventas ${noteBtn('VT')}</td><td>VT</td><td>${inp('VT')}</td><td>${comp(simState.VT)}</td></tr>${noteRow('VT')}
+                <tr><td style="padding-left:20px">Devoluciones sobre ventas ${noteBtn('DV')}</td><td>D/V</td><td>${inp('DV')}</td><td></td></tr>${noteRow('DV')}
+                <tr><td style="padding-left:20px">Descuentos sobre ventas ${noteBtn('DSV')}</td><td>DS/V</td><td>${inp('DSV')}</td><td></td></tr>${noteRow('DSV')}
+                <tr><td style="padding-left:20px">Rebajas sobre ventas ${noteBtn('RV')}</td><td>R/V</td><td>${inp('RV')}</td><td>${comp(-c.dedTotal, 'D/V+DS/V+R/V')}</td></tr>${noteRow('RV')}
+                <tr class="formula-row"><td><b>Ventas Netas</b> ${noteBtn('VN')}</td><td>VN</td><td></td><td>${comp(c.VN, 'VT - Deducciones')}</td></tr>${noteRow('VN')}
+                <tr><td>Costo de ventas ${noteBtn('CV')}</td><td>CV</td><td>${inp('CV')}</td><td>${comp(-simState.CV)}</td></tr>${noteRow('CV')}
+                <tr class="formula-row"><td><b>Utilidad Bruta</b> ${noteBtn('UB')}</td><td>UB</td><td></td><td>${comp(c.UB, 'VN - CV')}</td></tr>${noteRow('UB')}
+                <tr class="section-row"><td colspan="4">Gastos Generales</td></tr>
+                <tr><td style="padding-left:20px">Gastos de administración ${noteBtn('GA')}</td><td>GA</td><td>${inp('GA')}</td><td></td></tr>${noteRow('GA')}
+                <tr><td style="padding-left:20px">Gastos de venta ${noteBtn('GV')}</td><td>GV</td><td>${inp('GV')}</td><td>${comp(-c.GG, 'GA + GV')}</td></tr>${noteRow('GV')}
+                <tr class="formula-row"><td><b>Utilidad de Operación</b> ${noteBtn('UO')}</td><td>UO</td><td></td><td>${comp(c.UO, 'UB - GG')}</td></tr>${noteRow('UO')}
+                <tr class="section-row"><td colspan="4">Otros ingresos y gastos neto</td></tr>
+                <tr><td style="padding-left:20px">Otros productos ${noteBtn('OP')}</td><td>OP</td><td>${inp('OP')}</td><td></td></tr>${noteRow('OP')}
+                <tr><td style="padding-left:20px">Otros gastos ${noteBtn('OG')}</td><td>OG</td><td>${inp('OG')}</td><td>${comp(c.OPGN, 'OP - OG')}</td></tr>${noteRow('OG')}
+                <tr class="section-row"><td colspan="4">Resultado integral de financiamiento</td></tr>
+                <tr><td style="padding-left:20px">Productos financieros ${noteBtn('PF')}</td><td>PF</td><td>${inp('PF')}</td><td></td></tr>${noteRow('PF')}
+                <tr><td style="padding-left:20px">Gastos financieros ${noteBtn('GF')}</td><td>GF</td><td>${inp('GF')}</td><td></td></tr>${noteRow('GF')}
+                <tr><td style="padding-left:20px">Utilidad en cambios ${noteBtn('UC')}</td><td>UC</td><td>${inp('UC')}</td><td></td></tr>${noteRow('UC')}
+                <tr><td style="padding-left:20px">Pérdida en cambios ${noteBtn('PC')}</td><td>PC</td><td>${inp('PC')}</td><td>${comp(c.RIF, 'PF-GF+UC-PC')}</td></tr>${noteRow('PC')}
+                <tr class="formula-row"><td><b>Utilidad antes de impuestos</b> ${noteBtn('UAI')}</td><td>UAI</td><td></td><td>${comp(c.UAI, 'UO±OPGN±RIF')}</td></tr>${noteRow('UAI')}
+                <tr><td>Impuesto (${Math.round(simState.taxRate*100)}%) ${noteBtn('tax')}</td><td></td><td><input class="sim-input" type="number" data-key="taxRate" value="${simState.taxRate}" step="0.01" min="0" max="1" style="width:70px;"></td><td>${comp(-c.tax, `UAI × ${Math.round(simState.taxRate*100)}%`)}</td></tr>${noteRow('tax')}
+                <tr class="total-row"><td><b>UTILIDAD NETA</b> ${noteBtn('UN')}</td><td>UN</td><td></td><td>${comp(c.UN, 'UAI - Impuesto')}</td></tr>${noteRow('UN')}
+                <tr><td>Utilidad por acción ${noteBtn('UPA')}</td><td>UPA</td><td><span class="sim-formula">÷</span> ${inp('numShares')} <span class="sim-formula">acciones</span></td><td>${comp(c.UPA)}</td></tr>${noteRow('UPA')}
+            </tbody>
+        </table>`;
+        attachSimInputs();
+    }
+
+    function renderBalTab() {
+        const c = computeERI();
+        const b = computeBalance();
+        const s = simState;
+        const balanced = b.totalActivos === b.totalPasCapital;
+
+        contentArea.innerHTML = `
+        <div style="display:flex; gap:20px;">
+            <div style="flex:1;">
+                <table class="sim-table">
+                    <thead><tr><th>Activo</th><th>Valor</th><th>Neto</th></tr></thead>
+                    <tbody>
+                        <tr class="subsection-row"><td colspan="3">Corto plazo / Circulante</td></tr>
+                        <tr><td style="padding-left:16px">Disponible ${noteBtn('disponible')}</td><td>${inp('disponible')}</td><td></td></tr>${noteRow('disponible')}
+                        <tr><td style="padding-left:16px">Cuentas por cobrar ${noteBtn('cxc')}</td><td>${inp('cxc')}</td><td></td></tr>${noteRow('cxc')}
+                        <tr><td style="padding-left:16px">Mercancía ${noteBtn('mercancia')}</td><td>${inp('mercancia')}</td><td></td></tr>${noteRow('mercancia')}
+                        <tr><td style="padding-left:16px">Pagos anticipados ${noteBtn('pagosAnt')}</td><td>${inp('pagosAnt')}</td><td></td></tr>${noteRow('pagosAnt')}
+                        <tr class="formula-row"><td><b>Total Circulante</b></td><td></td><td>${comp(b.totCirc)}</td></tr>
+                        <tr class="subsection-row"><td colspan="3">Largo plazo / No circulante</td></tr>
+                        <tr><td style="padding-left:16px">CXC y Pag Ant LP ${noteBtn('cxcLP1')}</td><td>${inp('cxcLP1')}</td><td></td></tr>${noteRow('cxcLP1')}
+                        <tr><td style="padding-left:16px">CXC y Pag Ant LP ${noteBtn('cxcLP2')}</td><td>${inp('cxcLP2')}</td><td></td></tr>${noteRow('cxcLP2')}
+                        <tr><td style="padding-left:16px">Act. tangible ${noteBtn('tangible1')}</td><td>${inp('tangible1')}</td><td rowspan="2" style="vertical-align:middle">${comp(b.netTang1, 'tang−depcn')}</td></tr>${noteRow('tangible1')}
+                        <tr><td style="padding-left:28px; color:#888">− Depcn acum</td><td>${inp('depcn1')}</td></tr>
+                        <tr><td style="padding-left:16px">Act. tangible ${noteBtn('tangible2')}</td><td>${inp('tangible2')}</td><td rowspan="2" style="vertical-align:middle">${comp(b.netTang2, 'tang−depcn')}</td></tr>${noteRow('tangible2')}
+                        <tr><td style="padding-left:28px; color:#888">− Depcn acum</td><td>${inp('depcn2')}</td></tr>
+                        <tr><td style="padding-left:16px">Activo intangible ${noteBtn('intangible1')}</td><td>${inp('intangible1')}</td><td rowspan="2" style="vertical-align:middle">${comp(b.netIntang1, 'intang−amort')}</td></tr>${noteRow('intangible1')}
+                        <tr><td style="padding-left:28px; color:#888">− Amort acum</td><td>${inp('amort1')}</td></tr>
+                        <tr><td style="padding-left:16px">Activo intangible ${noteBtn('intangible2')}</td><td>${inp('intangible2')}</td><td rowspan="2" style="vertical-align:middle">${comp(b.netIntang2, 'intang−amort')}</td></tr>${noteRow('intangible2')}
+                        <tr><td style="padding-left:28px; color:#888">− Amort acum</td><td>${inp('amort2')}</td></tr>
+                        <tr><td style="padding-left:16px">Otros activos ${noteBtn('otrosAct')}</td><td>${inp('otrosAct')}</td><td></td></tr>${noteRow('otrosAct')}
+                        <tr class="formula-row"><td><b>Total No Circulante</b></td><td></td><td>${comp(b.totNC)}</td></tr>
+                        <tr class="grand-total-row"><td><b>TOTAL ACTIVOS</b></td><td></td><td>${comp(b.totalActivos)}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="flex:1;">
+                <table class="sim-table">
+                    <thead><tr><th>Pasivo + Capital</th><th>Valor</th><th>Total</th></tr></thead>
+                    <tbody>
+                        <tr class="subsection-row"><td colspan="3">Pasivo − Corto plazo</td></tr>
+                        <tr><td style="padding-left:16px">Cuentas pas CP ${noteBtn('pasCP1')}</td><td>${inp('pasCP1')}</td><td></td></tr>${noteRow('pasCP1')}
+                        <tr><td style="padding-left:16px">Cuentas pas CP ${noteBtn('pasCP2')}</td><td>${inp('pasCP2')}</td><td></td></tr>${noteRow('pasCP2')}
+                        <tr class="formula-row"><td><b>Total Pasivo CP</b></td><td></td><td>${comp(b.totPCP)}</td></tr>
+                        <tr class="subsection-row"><td colspan="3">Pasivo − Largo plazo</td></tr>
+                        <tr><td style="padding-left:16px">Cuentas pas LP ${noteBtn('pasLP1')}</td><td>${inp('pasLP1')}</td><td></td></tr>${noteRow('pasLP1')}
+                        <tr><td style="padding-left:16px">Cuentas pas LP ${noteBtn('pasLP2')}</td><td>${inp('pasLP2')}</td><td></td></tr>${noteRow('pasLP2')}
+                        <tr class="formula-row"><td><b>Total Pasivo LP</b></td><td></td><td>${comp(b.totPLP)}</td></tr>
+                        <tr class="formula-row"><td><b>TOTAL PASIVO</b></td><td></td><td>${comp(b.totP, 'PCP + PLP')}</td></tr>
+                        <tr class="subsection-row"><td colspan="3" style="padding-top:16px">Capital contable − Contribuido</td></tr>
+                        <tr><td style="padding-left:16px">Capital contr. ${noteBtn('capitalContr1')}</td><td>${inp('capitalContr1')}</td><td></td></tr>${noteRow('capitalContr1')}
+                        <tr><td style="padding-left:16px">Capital contr. ${noteBtn('capitalContr2')}</td><td>${inp('capitalContr2')}</td><td></td></tr>${noteRow('capitalContr2')}
+                        <tr class="formula-row"><td><b>Total Contribuido</b></td><td></td><td>${comp(b.totCcont)}</td></tr>
+                        <tr class="subsection-row"><td colspan="3">Capital contable − Ganado</td></tr>
+                        <tr><td style="padding-left:16px">Capital ganado ${noteBtn('capitalGan')}</td><td>${inp('capitalGan')}</td><td></td></tr>${noteRow('capitalGan')}
+                        <tr><td style="padding-left:16px; color:#1e40af"><b>Resultado del periodo (UN)</b> ${noteBtn('resultadoPeriodo')}</td><td></td><td>${comp(b.resultadoPeriodo, 'del ERI')}</td></tr>${noteRow('resultadoPeriodo')}
+                        <tr class="formula-row"><td><b>Total Ganado</b></td><td></td><td>${comp(b.totCG)}</td></tr>
+                        <tr class="formula-row"><td><b>TOTAL CAPITAL CONTABLE</b></td><td></td><td>${comp(b.TCC, 'Ccont + CG')}</td></tr>
+                        <tr class="grand-total-row"><td><b>PASIVO + CAPITAL</b></td><td></td><td>${comp(b.totalPasCapital)}</td></tr>
+                    </tbody>
+                </table>
+                <div class="sim-check ${balanced ? 'balanced' : 'unbalanced'}">
+                    ${balanced ? '&#10004;' : '&#10006;'} Activos ${fmt(b.totalActivos)} ${balanced ? '=' : '≠'} Pasivo+Capital ${fmt(b.totalPasCapital)}
+                    ${balanced ? '— Cuadra correctamente' : '— Diferencia: ' + fmt(b.totalActivos - b.totalPasCapital)}
+                </div>
+            </div>
+        </div>`;
+        attachSimInputs();
+    }
+
+    function attachSimInputs() {
+        contentArea.querySelectorAll('.sim-input').forEach(input => {
+            input.addEventListener('input', () => {
+                const key = input.dataset.key;
+                simState[key] = parseFloat(input.value) || 0;
+                if (tabERI.classList.contains('active')) renderERITab();
+                else renderBalTab();
+            });
+        });
+        // Note icons — toggle note area
+        contentArea.querySelectorAll('.sim-note-icon').forEach(icon => {
+            icon.addEventListener('click', () => {
+                const key = icon.dataset.notekey;
+                if (simNotes[key]) {
+                    // Toggle: if note row visible, just focus it
+                    const ta = contentArea.querySelector(`textarea[data-noteta="${key}"]`);
+                    if (ta) { ta.focus(); return; }
+                }
+                // Create note
+                simNotes[key] = simNotes[key] || ' ';
+                if (tabERI.classList.contains('active')) renderERITab();
+                else renderBalTab();
+                // Focus the new textarea
+                setTimeout(() => {
+                    const ta = contentArea.querySelector(`textarea[data-noteta="${key}"]`);
+                    if (ta) { ta.value = simNotes[key].trim(); ta.focus(); }
+                }, 30);
+            });
+        });
+        // Note textareas — save content
+        contentArea.querySelectorAll('textarea[data-noteta]').forEach(ta => {
+            ta.addEventListener('input', () => {
+                simNotes[ta.dataset.noteta] = ta.value;
+            });
+            ta.addEventListener('blur', () => {
+                if (!ta.value.trim()) {
+                    delete simNotes[ta.dataset.noteta];
+                    if (tabERI.classList.contains('active')) renderERITab();
+                    else renderBalTab();
+                }
+            });
+        });
+    }
+
+    tabERI.addEventListener('click', () => {
+        tabERI.classList.add('active'); tabBal.classList.remove('active');
+        renderERITab();
+    });
+    tabBal.addEventListener('click', () => {
+        tabBal.classList.add('active'); tabERI.classList.remove('active');
+        renderBalTab();
+    });
+
+    // Esc to close
+    const escHandler = (e) => { if (e.key === 'Escape') { ov.remove(); document.removeEventListener('keydown', escHandler); } };
+    document.addEventListener('keydown', escHandler);
+
+    renderERITab();
+}
+
+// ============================================================
+// SECTION 12: INIT
+// ============================================================
+
+// Try to load saved state
+const hadSavedState = loadFromStorage();
+render();
+renderAnnotations();
+if (hadSavedState) showToast('Ediciones anteriores restauradas');
+
+</script>
+</body>
+</html>
