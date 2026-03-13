@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estados Financieros - Editor Interactivo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Times New Roman', Times, serif; font-size: 13px; line-height: 1.5; padding: 0; margin: 0; color: #000; }
@@ -277,10 +278,11 @@
     <span class="tool-label">Color:</span>
     <input type="color" id="ann-color" value="#e74c3c" title="Color de anotación">
     <div class="tool-divider"></div>
-    <button class="tool-btn" id="btn-clear-ann" title="Borrar todas las anotaciones">&#10006; Limpiar</button>
+    <button class="tool-btn" id="btn-clear-ann" title="Borrar todas las anotaciones dibujadas">&#10006; Borrar dibujos</button>
     <div class="tool-divider"></div>
     <button class="tool-btn" id="btn-simulate" title="Simulación numérica" style="background:#1e40af;border-color:#1e40af;">&#9881; Simular</button>
     <div style="flex:1"></div>
+    <button class="tool-btn" id="btn-screenshot" title="Descargar imagen del documento">&#128247; Imagen</button>
     <button class="tool-btn" id="btn-json" title="Copiar ediciones como JSON">{ } JSON</button>
     <button class="tool-btn" id="btn-reset" title="Reiniciar a valores originales">&#8634; Reiniciar</button>
     <div class="tool-divider"></div>
@@ -288,6 +290,7 @@
 </div>
 
 <!-- ===== MAIN CONTENT ===== -->
+<div id="capture-area" style="position:relative;">
 <div id="statements-container"></div>
 
 <!-- ===== ANNOTATION SVG OVERLAY ===== -->
@@ -298,6 +301,7 @@
         </marker>
     </defs>
 </svg>
+</div>
 
 <!-- ===== MODAL CONTAINER ===== -->
 <div id="modal-root"></div>
@@ -1462,6 +1466,32 @@ function showToast(msg) {
 // ============================================================
 // SECTION 10: JSON EXPORT, RESET, SIMULATE BUTTONS
 // ============================================================
+
+document.getElementById('btn-screenshot').addEventListener('click', () => {
+    const btn = document.getElementById('btn-screenshot');
+    btn.disabled = true;
+    btn.textContent = 'Capturando...';
+    const content = document.getElementById('capture-area');
+    html2canvas(content, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        foreignObjectRendering: true
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'estados-financieros.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('Imagen descargada');
+    }).catch(err => {
+        console.error('Screenshot error:', err);
+        showToast('Error al capturar imagen');
+    }).finally(() => {
+        btn.disabled = false;
+        btn.textContent = '\u{1F4F7} Imagen';
+    });
+});
 
 document.getElementById('btn-json').addEventListener('click', () => {
     const edits = getEditsDiff();
