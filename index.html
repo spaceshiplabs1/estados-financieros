@@ -1847,6 +1847,39 @@ render();
 renderAnnotations();
 if (hadSavedState) showToast('Ediciones anteriores restauradas');
 
+// Instructions popup - shown every time
+(function showInstructions() {
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:8000;display:flex;align-items:center;justify-content:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#fff;border-radius:12px;padding:32px;max-width:560px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto;';
+    box.innerHTML = `
+        <h2 style="margin:0 0 16px;font-size:20px;color:#1e40af;">Estados Financieros - Instrucciones</h2>
+        <div style="font-size:14px;line-height:1.7;color:#333;">
+            <p style="margin:0 0 12px;"><b>Editar nombres:</b> Haz clic en cualquier nombre de cuenta para editarlo. Las abreviaturas en las fórmulas se actualizan automáticamente.</p>
+            <p style="margin:0 0 12px;"><b>Agregar/eliminar líneas:</b> Pasa el cursor sobre una fila para ver los botones <span style="color:green;font-weight:bold;">+</span> y <span style="color:red;font-weight:bold;">−</span>. Si eliminar una línea rompe una fórmula, verás una advertencia.</p>
+            <p style="margin:0 0 12px;"><b>Notas por campo:</b> Pasa el cursor sobre una fila y haz clic en el icono <span style="color:#1e40af;font-weight:bold;">?</span> para agregar una nota explicativa.</p>
+            <p style="margin:0 0 12px;"><b>Anotar con dibujos:</b> Usa la barra de herramientas para dibujar <b>flechas</b>, <b>círculos</b> y <b>notas</b> sobre el documento. Clic derecho para eliminar una anotación.</p>
+            <p style="margin:0 0 12px;"><b>Simular:</b> El botón <span style="color:#1e40af;font-weight:bold;">Simular</span> abre una ventana donde puedes ingresar números y ver las fórmulas calcularse en tiempo real.</p>
+            <p style="margin:0 0 12px;"><b>Exportar:</b></p>
+            <ul style="margin:0 0 12px;padding-left:20px;">
+                <li><b>Imagen</b> — descarga una captura PNG del documento (incluye anotaciones dibujadas)</li>
+                <li><b>JSON</b> — copia al portapapeles las ediciones realizadas (nombres, notas, líneas agregadas/eliminadas)</li>
+                <li><b>Imprimir</b> — imprime o genera PDF del documento</li>
+            </ul>
+            <p style="margin:0 0 12px;"><b>Reiniciar:</b> Borra todas las ediciones y vuelve al estado original.</p>
+            <p style="margin:0;color:#666;font-size:12px;">Las ediciones se guardan automáticamente en tu navegador (localStorage).</p>
+        </div>
+        <div style="text-align:right;margin-top:20px;">
+            <button id="btn-close-instructions" style="background:#1e40af;color:#fff;border:none;padding:10px 28px;border-radius:6px;font-size:15px;cursor:pointer;">Entendido</button>
+        </div>
+    `;
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    box.querySelector('#btn-close-instructions').addEventListener('click', () => ov.remove());
+    ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+})();
+
 </script>
 </body>
 </html>
